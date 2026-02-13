@@ -1,0 +1,15 @@
+PNEUMONIA (CXR) - QUICK NOTES
+
+Common CXR patterns:
+- Lobar consolidation: focal airspace opacity, often with air bronchograms.
+- Bronchopneumonia: patchy, multifocal opacities.
+- Interstitial pattern: diffuse reticular/ground-glass (can overlap with viral causes).
+
+Clinical correlation:
+- Consider fever, cough, SpO2 drop, tachypnea.
+- Normal CXR does not fully exclude early infection.
+
+Suggested next steps (general):
+- Correlate with symptoms and vitals.
+- If clinically suspected: consider antibiotics as per protocol and follow-up imaging.
+- Consider alternate diagnoses (atelectasis, edema) if pattern not typical.

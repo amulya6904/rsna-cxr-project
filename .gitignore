@@ -1,0 +1,22 @@
+# ===== DATASETS =====
+data/
+rsna-pneumonia-detection-challenge/
+*.zip
+
+# ===== MODEL WEIGHTS =====
+models/
+*.pt
+
+# ===== OUTPUT FILES =====
+outputs/
+*.png
+*.jpg
+*.jpeg
+
+# ===== PYTHON CACHE =====
+__pycache__/
+*.pyc
+
+# ===== SYSTEM =====
+.DS_Store
+Thumbs.db
