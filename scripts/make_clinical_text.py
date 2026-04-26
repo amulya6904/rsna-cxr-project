@@ -48,5 +48,5 @@ for _, r in df.iterrows():
 out = pd.DataFrame(rows)
 out.to_csv(OUT_PATH, index=False)
 
-print("✅ Saved:", OUT_PATH)
+print("Saved:", OUT_PATH)
 print(out.head(3))
