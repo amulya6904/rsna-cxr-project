@@ -1,0 +1,40 @@
+
+Cardiology Risk Prediction Validation Report
+===========================================
+
+Dataset:
+UCI Heart Disease - Cleveland processed dataset
+
+Model:
+Random Forest Classifier
+
+Metrics:
+Accuracy: 0.8667
+Precision: 0.8333
+Recall / Sensitivity: 0.8333
+F1 Score: 0.8333
+ROC-AUC: 0.9497
+
+Confusion Matrix:
+[[32  4]
+ [ 4 20]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.89      0.89      0.89        36
+           1       0.83      0.83      0.83        24
+
+    accuracy                           0.87        60
+   macro avg       0.86      0.86      0.86        60
+weighted avg       0.87      0.87      0.87        60
+
+
+Interpretation:
+The model predicts whether a patient is at possible cardiovascular disease risk
+based on structured clinical features such as age, cholesterol, blood pressure,
+ECG-related values, chest pain type, and exercise-induced symptoms.
+
+Clinical Note:
+This model is not a replacement for cardiologist diagnosis. It is intended as
+a decision-support and academic research prototype.

@@ -60,3 +60,20 @@ def full_analysis(data: PatientData):
         "xai_summary": result["xai_summary"],
         "explanation": result["personalized_explanation"]
     }
+
+@app.get("/validation-summary")
+def validation_summary():
+    return {
+        "dataset": "UCI Heart Disease - Cleveland processed dataset",
+        "model": "Random Forest Classifier",
+        "metrics_used": [
+            "Accuracy",
+            "Precision",
+            "Recall/Sensitivity",
+            "F1 Score",
+            "ROC-AUC",
+            "Confusion Matrix",
+        ],
+        "validation_status": "Validated on public benchmark dataset",
+        "clinical_note": "Academic prototype only. Not a replacement for cardiologist diagnosis.",
+    }
