@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+joblib
+matplotlib
+shap
+langchain
+langchain-community
+chromadb
+sentence-transformers
+ollama
