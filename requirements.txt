@@ -1,0 +1,6 @@
+chromadb
+langchain-community
+langchain-text-splitters
+ollama
+onnxruntime
+sentence-transformers
