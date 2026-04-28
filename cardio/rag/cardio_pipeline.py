@@ -1,42 +1,45 @@
 import sys
 import os
 
-# Add paths
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models")))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rag")))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+sys.path.append(os.path.join(BASE_DIR, "models"))
+sys.path.append(os.path.join(BASE_DIR, "rag"))
+sys.path.append(os.path.join(BASE_DIR, "personalization"))
 
 from predict import predict_cardio
 from cardio_llm import generate_cardio_answer
+from patient_profile import build_patient_profile
 
 def full_cardio_analysis(patient_data):
-    # Step 1: Risk prediction
     risk_result = predict_cardio(patient_data)
+    patient_profile = build_patient_profile(patient_data)
 
-    # Step 2: Build query for LLM
     query = f"""
-Patient details:
-Age: {patient_data[0]}
-BP: {patient_data[3]}
-Cholesterol: {patient_data[4]}
+{patient_profile}
 
-Risk Level: {risk_result['risk_level']}
+Model Risk Result:
+- Prediction: {risk_result['prediction']}
+- Risk Probability: {risk_result['risk_probability']}
+- Risk Level: {risk_result['risk_level']}
 
-Explain the risk and suggest next steps.
+Give a personalized explanation and suggest safe next steps.
+Do not give final medical diagnosis.
+Mention that cardiologist review is required.
 """
 
-    # Step 3: LLM explanation
     explanation = generate_cardio_answer(query)
 
     return {
+        "patient_profile": patient_profile,
         "risk_prediction": risk_result,
-        "llm_explanation": explanation
+        "personalized_explanation": explanation
     }
 
 if __name__ == "__main__":
     sample = [55, 1, 2, 140, 240, 0, 1, 150, 0, 1.5, 1, 0, 2]
-    
     result = full_cardio_analysis(sample)
 
-    print("Final Cardio Analysis")
-    print("---------------------")
+    print("Final Personalized Cardio Analysis")
+    print("----------------------------------")
     print(result)

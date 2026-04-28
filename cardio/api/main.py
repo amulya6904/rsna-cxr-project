@@ -5,8 +5,10 @@ import os
 
 # Add models path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rag")))
 
 from predict import predict_cardio
+from cardio_pipeline import full_cardio_analysis
 
 app = FastAPI()
 
@@ -39,3 +41,20 @@ def predict(data: PatientData):
 
     result = predict_cardio(features)
     return result
+
+def to_features(data: PatientData):
+    return [
+        data.age, data.sex, data.cp, data.trestbps,
+        data.chol, data.fbs, data.restecg, data.thalach,
+        data.exang, data.oldpeak, data.slope, data.ca, data.thal
+    ]
+
+@app.post("/full-analysis")
+def full_analysis(data: PatientData):
+    result = full_cardio_analysis(to_features(data))
+
+    return {
+        "profile": result["patient_profile"],
+        "risk": result["risk_prediction"],
+        "explanation": result["personalized_explanation"]
+    }

@@ -1,25 +1,8 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
 import ollama
 import os
+from cardio_llm import retrieve_cardio_context
 
-DB_PATH = "vectorstore"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
-
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
-    model_kwargs={"local_files_only": True}
-)
-
-db = Chroma(
-    persist_directory=DB_PATH,
-    embedding_function=embeddings
-)
-
-def retrieve_cardio_context(query):
-    results = db.similarity_search(query, k=3)
-    context = "\n\n".join([doc.page_content for doc in results])
-    return context
+OLLAMA_MODEL = os.getenv("CARDIO_OLLAMA_MODEL", "llama3.2:latest")
 
 def generate_answer(query):
     context = retrieve_cardio_context(query)
