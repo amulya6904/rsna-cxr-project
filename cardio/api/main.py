@@ -56,5 +56,7 @@ def full_analysis(data: PatientData):
     return {
         "profile": result["patient_profile"],
         "risk": result["risk_prediction"],
+        "top_features": result["top_features"],
+        "xai_summary": result["xai_summary"],
         "explanation": result["personalized_explanation"]
     }
