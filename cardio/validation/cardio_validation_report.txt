@@ -9,25 +9,25 @@ Model:
 Random Forest Classifier
 
 Metrics:
-Accuracy: 0.8667
-Precision: 0.8333
-Recall / Sensitivity: 0.8333
-F1 Score: 0.8333
-ROC-AUC: 0.9497
+Accuracy: 0.8833
+Precision: 0.8400
+Recall / Sensitivity: 0.8750
+F1 Score: 0.8571
+ROC-AUC: 0.9479
 
 Confusion Matrix:
 [[32  4]
- [ 4 20]]
+ [ 3 21]]
 
 Classification Report:
               precision    recall  f1-score   support
 
-           0       0.89      0.89      0.89        36
-           1       0.83      0.83      0.83        24
+           0       0.91      0.89      0.90        36
+           1       0.84      0.88      0.86        24
 
-    accuracy                           0.87        60
-   macro avg       0.86      0.86      0.86        60
-weighted avg       0.87      0.87      0.87        60
+    accuracy                           0.88        60
+   macro avg       0.88      0.88      0.88        60
+weighted avg       0.88      0.88      0.88        60
 
 
 Interpretation:
