@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from PIL import Image
 from torchvision import models, transforms
 
@@ -284,3 +285,23 @@ def predict(
             "urgency": urgency,
         },
     }
+
+class ChatRequest(BaseModel):
+    query: str
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    import requests
+    try:
+        # Simple fallback to ollama if available, otherwise mock response
+        res = requests.post("http://localhost:11434/api/generate", json={
+            "model": "llama3.2:latest",
+            "prompt": f"You are a Pulmonology AI. Answer: {request.query}",
+            "stream": False
+        }, timeout=5)
+        if res.status_code == 200:
+            return {"answer": res.json().get("response", "No response from Llama")}
+    except Exception:
+        pass
+    
+    return {"answer": f"Pulmonology Assistant: I see you asked about '{request.query}'. Please ensure Ollama is running locally for full dynamic responses."}
