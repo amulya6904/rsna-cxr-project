@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sys
 import os
@@ -10,7 +11,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "r
 from predict import predict_cardio
 from cardio_pipeline import full_cardio_analysis
 
+try:
+    from cardio_llm import generate_cardio_answer
+except ImportError:
+    generate_cardio_answer = None
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class PatientData(BaseModel):
     age: float
@@ -27,9 +41,22 @@ class PatientData(BaseModel):
     ca: float
     thal: float
 
+class ChatRequest(BaseModel):
+    query: str
+
 @app.get("/")
 def home():
     return {"message": "Cardiology API Running"}
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    if generate_cardio_answer is None:
+        return {"answer": "Llama chatbot integration is not available."}
+    try:
+        answer = generate_cardio_answer(request.query)
+        return {"answer": answer}
+    except Exception as e:
+        return {"answer": f"Error communicating with Llama: {str(e)}"}
 
 @app.post("/predict")
 def predict(data: PatientData):

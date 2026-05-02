@@ -1,964 +1,287 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
-  <head>
-
-    <meta charset="UTF-8" />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <meta
-
-      name="description"
-
-      content="Nuvexa Clinical AI - Multimodal chest X-ray decision support interface."
-
-    />
-    <meta name="api-base" content="http://127.0.0.1:8000" />
-
-    <title>Nuvexa - Upload</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <link
-
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Nunito:wght@400;500;600;700&display=swap"
-
-      rel="stylesheet"
-
-    />
-
-    <link rel="stylesheet" href="./styles.css" />
-
-  </head>
-
-  <body>
-
-    <div class="app-shell">
-
-      <div class="ambient ambient-one"></div>
-
-      <div class="ambient ambient-two"></div>
-
-      <div class="ambient-grid"></div>
-
-
-
-      <header class="topbar glass glass-nav">
-
-        <button
-
-          class="menu-toggle icon-button"
-
-          type="button"
-
-          aria-label="Toggle navigation"
-
-          data-menu-toggle
-
-        >
-
-          <span></span>
-
-          <span></span>
-
-        </button>
-
-
-
-        <nav class="nav-links" data-mobile-nav>
-
-          <button class="nav-link is-active" type="button" data-route="upload">Upload</button>
-
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuvexa - AI Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell" data-module="radiology">
+    
+    <header class="topbar">
+      <nav class="nav-left">
+        <div class="nav-links">
+          <button class="nav-link" type="button" data-route="home" onclick="alert('Home clicked')">Home</button>
+          <button class="nav-link is-active" type="button" data-route="input">Upload</button>
           <button class="nav-link" type="button" data-route="results">Analysis</button>
-
           <button class="nav-link" type="button" data-route="history">History</button>
-
-        </nav>
-
-
-
-        <div class="brand-cluster">
-
-          <div class="status-pill" aria-live="polite">
-
-            <span class="status-dot"></span>
-
-            API Ready
-
-          </div>
-
-          <a class="brand-lockup" href="#upload" data-route="upload" aria-label="Nuvexa home">
-
-            <span class="brand-mark" aria-hidden="true">
-
-              <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
-
-                <defs>
-
-                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-
-                    <stop offset="0%" stop-color="#7ab2b2" />
-
-                    <stop offset="100%" stop-color="#088395" />
-
-                  </linearGradient>
-
-                </defs>
-
-                <rect x="6" y="6" width="52" height="52" rx="18" fill="rgba(255,255,255,0.55)" />
-
-                <path
-
-                  d="M18 44V20l14 16 14-16v24"
-
-                  fill="none"
-
-                  stroke="url(#brandGradient)"
-
-                  stroke-linecap="round"
-
-                  stroke-linejoin="round"
-
-                  stroke-width="5"
-
-                />
-
-              </svg>
-
-            </span>
-
-            <span class="brand-wordmark">NUVEXA</span>
-
-          </a>
-
+          <button class="nav-link" type="button" data-route="chatbot">Chatbot</button>
         </div>
-
-      </header>
-
-
-
-      <main class="page-stack">
-
-        <section class="page is-active" id="upload-page" data-page="upload">
-
-          <div class="hero-intro">
-
-            <div class="eyebrow">Clinical AI Decision Support</div>
-
-            <div class="intro-heading-row">
-
-              <div>
-
-                <h1>Chest X-ray triage with elegant clinical clarity.</h1>
-
-                <p>
-
-                  Upload a study, capture bedside context, and surface explainable pneumonia
-
-                  guidance in a clean premium workflow built for medical review.
-
-                </p>
-
-              </div>
-
-              <div class="hero-stat glass glass-elevated">
-
-                <span>DenseNet-121</span>
-
-                <strong>Multimodal Review</strong>
-
-                <small>Image + symptoms + knowledge retrieval + explainability</small>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-
-          <div class="upload-layout">
-
-            <section class="glass glass-panel upload-panel">
-
-              <div class="section-heading">
-
-                <div>
-
-                  <span class="section-label">Page 1</span>
-
-                  <h2>Upload & Patient Intake</h2>
-
-                </div>
-
-                <span class="subtle-chip">PNG / JPG / DICOM</span>
-
-              </div>
-
-
-
-              <label class="upload-dropzone" for="xray-upload" data-dropzone>
-
-                <input
-
-                  id="xray-upload"
-
-                  class="visually-hidden"
-
-                  type="file"
-
-                  accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg"
-
-                  data-file-input
-
-                />
-
-                <div class="upload-icon" aria-hidden="true">
-
-                  <svg viewBox="0 0 96 96">
-
-                    <path
-
-                      d="M32 18c-9 0-16 7-16 16v16c0 14 7 22 18 28l14 8 14-8c11-6 18-14 18-28V34c0-9-7-16-16-16-6 0-12 3-16 8-4-5-10-8-16-8Z"
-
-                    />
-
-                  </svg>
-
-                </div>
-
-                <h3>Drop your X-ray here</h3>
-
-                <p>PNG, JPG, DICOM - max 20MB</p>
-
-                <span class="dropzone-meta">Drag to preview instantly or click to replace later</span>
-
-              </label>
-
-
-
-              <div class="upload-feedback">
-
-                <div class="preview-card glass glass-inset" data-preview-card>
-
-                  <div class="preview-empty" data-preview-empty>
-
-                    <span>No image selected yet</span>
-
-                  </div>
-
-                  <img class="preview-image hidden" alt="Uploaded X-ray preview" data-preview-image />
-
-                  <div class="preview-overlay hidden" data-preview-overlay>
-
-                    <div>
-
-                      <strong data-file-name>study.png</strong>
-
-                      <span data-file-size>0 MB</span>
-
-                    </div>
-
-                    <span class="mini-badge" data-file-type>PNG</span>
-
-                  </div>
-
-                </div>
-
-
-
-                <div class="processing-card glass glass-inset">
-
-                  <div class="processing-header">
-
-                    <span>Image preprocessing</span>
-
-                    <strong data-preprocess-label>Waiting for upload</strong>
-
-                  </div>
-
-                  <div class="progress-track" aria-hidden="true">
-
-                    <span class="progress-fill" data-progress-fill></span>
-
-                  </div>
-
-                  <small data-upload-error>Formats are validated before analysis begins.</small>
-
-                </div>
-
-              </div>
-
-            </section>
-
-
-
-            <section class="glass glass-panel form-panel">
-
-              <div class="section-heading">
-
-                <div>
-
-                  <span class="section-label">Clinical Context</span>
-
-                  <h2>Patient Intake</h2>
-
-                </div>
-
-                <span class="subtle-chip" data-urgency-label>Routine Review</span>
-
-              </div>
-
-
-
-              <form class="patient-form" data-intake-form>
-
-                <div class="field-grid two-up">
-
-                  <label class="field">
-
-                    <span>Patient Age</span>
-
-                    <input
-
-                      class="input-field"
-
-                      type="number"
-
-                      min="1"
-
-                      max="120"
-
-                      placeholder="56"
-
-                      data-age
-
-                    />
-
-                  </label>
-
-
-
-                  <fieldset class="field">
-
-                    <span>Sex</span>
-
-                    <div class="segmented-control">
-
-                      <button class="segment is-selected" type="button" data-sex="Male">Male</button>
-
-                      <button class="segment" type="button" data-sex="Female">Female</button>
-
-                      <button class="segment" type="button" data-sex="Other">Other</button>
-
-                    </div>
-
-                  </fieldset>
-
-                </div>
-
-
-
-                <fieldset class="field">
-
-                  <span>Chief Complaint</span>
-
-                  <div class="tag-grid" data-symptoms>
-
-                    <button class="tag" type="button" data-symptom="Fever">Fever</button>
-
-                    <button class="tag" type="button" data-symptom="Cough">Cough</button>
-
-                    <button class="tag" type="button" data-symptom="Shortness of Breath">Shortness of Breath</button>
-
-                    <button class="tag" type="button" data-symptom="Chest Pain">Chest Pain</button>
-
-                    <button class="tag" type="button" data-symptom="Fatigue">Fatigue</button>
-
-                    <button class="tag" type="button" data-symptom="Asymptomatic">Asymptomatic</button>
-
-                  </div>
-
-                </fieldset>
-
-
-
-                <div class="field-grid two-up">
-
-                  <label class="field">
-
-                    <span>SpO2 Reading</span>
-
-                    <div class="spo2-wrap">
-
-                      <input
-
-                        class="input-field"
-
-                        type="number"
-
-                        min="40"
-
-                        max="100"
-
-                        placeholder="94"
-
-                        data-spo2
-
-                      />
-
-                      <span class="spo2-indicator status-neutral" data-spo2-indicator></span>
-
-                    </div>
-
-                    <small class="field-hint" data-spo2-copy>
-
-                      Live triage color updates based on oxygen saturation.
-
-                    </small>
-
-                  </label>
-
-
-
-                  <fieldset class="field">
-
-                    <span>Urgency</span>
-
-                    <div class="segmented-control urgency-control">
-
-                      <button class="segment is-selected" type="button" data-urgency="Routine">
-
-                        Routine
-
-                      </button>
-
-                      <button class="segment" type="button" data-urgency="Urgent">Urgent</button>
-
-                    </div>
-
-                  </fieldset>
-
-                </div>
-
-
-
-                <label class="field">
-
-                  <span>Past Medical History</span>
-
-                  <textarea
-
-                    class="input-field textarea-field"
-
-                    rows="4"
-
-                    maxlength="240"
-
-                    placeholder="COPD, diabetes, prior admission for lower respiratory infection..."
-
-                    data-history
-
-                  ></textarea>
-
-                  <small class="field-hint">
-
-                    <span>Character count</span>
-
-                    <span data-history-count>0 / 240</span>
-
-                  </small>
-
-                </label>
-
-
-
-                <button class="cta-primary" type="button" disabled data-analyze>
-
-                  <span>Analyze Case</span>
-
-                  <strong data-analyze-copy>Upload an image to continue</strong>
-
-                </button>
-
-              </form>
-
-            </section>
-
-          </div>
-
-        </section>
-
-
-
-        <section class="page" id="results-page" data-page="results">
-
-          <div class="breadcrumbs glass glass-inset">
-
-            <button type="button" data-route="upload">Upload</button>
-
-            <span>/</span>
-
-            <button type="button" class="is-current">Analysis Results</button>
-
-          </div>
-
-
-
-          <div class="results-layout">
-
-            <section class="glass glass-panel viewer-panel">
-
-              <div class="section-heading">
-
-                <div>
-
-                  <span class="section-label">Page 2</span>
-
-                  <h2>X-ray Viewer</h2>
-
-                </div>
-
-                <div class="viewer-actions">
-
-                  <button class="icon-button" type="button" aria-label="Zoom out" data-zoom-out>-</button>
-
-                  <button class="icon-button" type="button" aria-label="Zoom in" data-zoom-in>+</button>
-
-                  <button class="icon-button" type="button" aria-label="Toggle fullscreen mockup">[]</button>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="segmented-control result-toggle">
-
-                <button class="segment is-selected" type="button" data-view-mode="original">Original</button>
-
-                <button class="segment" type="button" data-view-mode="heatmap">AI Heatmap</button>
-
-              </div>
-
-
-
-              <div class="viewer-stage">
-
-                <div class="viewer-frame" data-viewer-frame>
-
-                  <img class="viewer-image" alt="Original chest X-ray" data-viewer-base />
-
-                  <div class="heatmap-layer hidden" data-viewer-heatmap>
-                    <img class="viewer-heatmap-image" alt="Grad-CAM heatmap" data-viewer-heatmap-image />
-                    <div class="heat-glow heat-a" title="High attention region"></div>
-                    <div class="heat-glow heat-b" title="High attention region"></div>
-                    <div class="heat-glow heat-c" title="High attention region"></div>
-                  </div>
-                </div>
-
-              </div>
-
-
-
-              <label class="range-control">
-
-                <span>Heatmap Opacity</span>
-
-                <input type="range" min="0" max="100" value="62" data-opacity />
-
-                <strong data-opacity-copy>62%</strong>
-
-              </label>
-
-
-
-              <div class="viewer-footer">
-                <button class="cta-secondary" type="button" data-download-original>Download Original</button>
-                <button class="cta-secondary" type="button" data-download-overlay>Download Overlay</button>
-              </div>
-            </section>
-
-
-
-            <section class="glass glass-panel summary-panel">
-
-              <div class="section-heading">
-
-                <div>
-
-                  <span class="section-label">Prediction Summary</span>
-
-                  <h2>Model Assessment</h2>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="risk-badge risk-moderate" data-risk-badge>
-
-                <span class="risk-icon" data-risk-icon>!</span>
-
-                <span data-risk-label>Moderate Risk</span>
-
-              </div>
-
-
-
-              <div class="gauge-card glass glass-inset">
-
-                <svg class="confidence-gauge" viewBox="0 0 160 160" aria-label="Pneumonia probability">
-
-                  <circle class="gauge-track" cx="80" cy="80" r="58"></circle>
-
-                  <circle class="gauge-fill" cx="80" cy="80" r="58" data-gauge-fill></circle>
-
-                </svg>
-
-                <div class="gauge-center">
-
-                  <strong data-gauge-value>68%</strong>
-
-                  <span>Pneumonia Probability</span>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="confidence-copy">
-
-                <strong data-confidence-copy>Confidence calibrated from image and bedside inputs.</strong>
-
-                <span data-model-confidence>Model confidence: 0.82</span>
-
-              </div>
-
-
-
-              <div class="clinical-recap glass glass-inset">
-
-                <div class="mini-heading">
-
-                  <span>Clinical Text Summary</span>
-
-                </div>
-
-                <dl class="recap-list" data-recap-list></dl>
-
-              </div>
-
-
-
-              <div class="summary-actions">
-                <button class="cta-primary compact" type="button" data-download-report>Download Report (PDF)</button>
-                <button class="cta-secondary compact" type="button" data-route="upload">Start New Analysis</button>
-              </div>
-            </section>
-
-
-
-            <section class="glass glass-panel guidance-panel">
-
-              <div class="section-heading">
-
-                <div>
-
-                  <span class="section-label">Clinical Guidance</span>
-
-                  <h2>Action Surface</h2>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="tab-strip">
-
-                <button class="tab is-active" type="button" data-tab="next-steps">Next Steps</button>
-
-                <button class="tab" type="button" data-tab="knowledge-base">Knowledge Base</button>
-
-                <button class="tab" type="button" data-tab="red-flags">Red Flags</button>
-
-              </div>
-
-
-
-              <div class="tab-panels">
-
-                <div class="tab-panel is-active" data-tab-panel="next-steps">
-
-                  <div class="step-card glass glass-inset">
-
-                    <span>1</span>
-
-                    <p>Correlate the radiographic pattern with symptoms, vitals, and oxygen saturation.</p>
-
-                  </div>
-
-                  <div class="step-card glass glass-inset">
-
-                    <span>2</span>
-
-                    <p>Review the heatmap for focal right lower zone attention before deciding on escalation.</p>
-
-                  </div>
-
-                  <div class="step-card glass glass-inset">
-
-                    <span>3</span>
-
-                    <p>Consider antibiotics and follow-up imaging if the clinical picture remains consistent with infection.</p>
-
-                  </div>
-
-                </div>
-
-
-
-                <div class="tab-panel" data-tab-panel="knowledge-base">
-
-                  <details class="knowledge-card glass glass-inset" open>
-
-                    <summary>
-
-                      <div>
-
-                        <strong>pneumonia_notes.txt</strong>
-
-                        <span>Relevance 0.96</span>
-
-                      </div>
-
-                      <span class="score-bar"><i style="width: 96%"></i></span>
-
-                    </summary>
-
-                    <p>
-
-                      Common CXR patterns include lobar consolidation, bronchopneumonia with patchy multifocal opacities,
-
-                      and diffuse interstitial changes that may overlap with viral causes.
-
-                    </p>
-
-                  </details>
-
-
-
-                  <details class="knowledge-card glass glass-inset">
-
-                    <summary>
-
-                      <div>
-
-                        <strong>red_flags.txt</strong>
-
-                        <span>Relevance 0.89</span>
-
-                      </div>
-
-                      <span class="score-bar"><i style="width: 89%"></i></span>
-
-                    </summary>
-
-                    <p>
-
-                      Urgent review is recommended when SpO2 drops below 90%, respiratory distress is severe,
-
-                      or symptoms progress rapidly with hypotension or sepsis features.
-
-                    </p>
-
-                  </details>
-
-                </div>
-
-
-
-                <div class="tab-panel" data-tab-panel="red-flags">
-
-                  <div class="red-flag-list" data-red-flag-list>
-
-                    <label class="check-row">
-
-                      <input type="checkbox" />
-
-                      <span>SpO2 &lt; 90% on room air</span>
-
-                    </label>
-
-                    <label class="check-row">
-
-                      <input type="checkbox" />
-
-                      <span>Severe respiratory distress or altered sensorium</span>
-
-                    </label>
-
-                    <label class="check-row">
-
-                      <input type="checkbox" />
-
-                      <span>Rapid progression of symptoms</span>
-
-                    </label>
-
-                    <label class="check-row">
-
-                      <input type="checkbox" />
-
-                      <span>Hypotension or signs of sepsis</span>
-
-                    </label>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </section>
-
-          </div>
-
-
-
-        </section>
-
-
-
-        <section class="page" id="history-page" data-page="history">
-
-          <div class="section-heading page-heading">
-
-            <div>
-
-              <span class="section-label">Page 3</span>
-
-              <h2>Case History</h2>
-
-            </div>
-
-            <button class="cta-secondary compact" type="button" data-route="upload">Run Analysis</button>
-
-          </div>
-
-
-
-          <section class="glass glass-panel history-panel">
-
-            <div class="history-toolbar">
-
-              <label class="search-wrap glass glass-inset">
-
-                <span class="search-icon">Search</span>
-
-                <input
-
-                  class="search-input"
-
-                  type="search"
-
-                  placeholder="Search by patient reference or risk level"
-
-                  data-history-search
-
-                />
-
-              </label>
-
-
-
-              <div class="filter-row" data-filter-row>
-
-                <button class="filter-chip is-active" type="button" data-filter="All">All</button>
-
-                <button class="filter-chip" type="button" data-filter="Low">Low</button>
-
-                <button class="filter-chip" type="button" data-filter="Moderate">Moderate</button>
-
-                <button class="filter-chip" type="button" data-filter="High">High</button>
-
-              </div>
-
-            </div>
-
-
-
-            <div class="table-wrap" data-history-wrap>
-
-              <table class="history-table">
-
-                <thead>
-
-                  <tr>
-
-                    <th>Timestamp</th>
-
-                    <th>Patient Reference</th>
-
-                    <th>Risk Level</th>
-
-                    <th>Probability</th>
-
-                    <th>Actions</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody data-history-body></tbody>
-
-              </table>
-
-            </div>
-
-
-
-            <div class="empty-state hidden" data-empty-state>
-
-              <div class="empty-illustration" aria-hidden="true">
-
-                <svg viewBox="0 0 120 120">
-
-                  <path d="M18 34h28l10 10h46v42c0 8-6 14-14 14H32c-8 0-14-6-14-14V34Z" />
-
-                  <path d="M38 58h44M38 72h32" />
-
-                </svg>
-
-              </div>
-
-              <h3>No matching cases yet</h3>
-
-              <p>Run your first analysis to populate this session history and revisit reports.</p>
-
-            </div>
-
-          </section>
-
-        </section>
-
-      </main>
-
+      </nav>
+
+      <div class="brand-lockup">
+        <span class="brand-dot">•</span>
+        <span class="brand-wordmark">NUVEXA</span>
+      </div>
+    </header>
+
+    <div class="module-tabs" id="module-tabs-container" style="display: none;">
+      <button class="module-tab is-active" type="button" data-module="radiology">■ Pulmonology</button>
+      <button class="module-tab" type="button" data-module="cardiology">❤ Cardiology</button>
+      <div class="status-pill status-ready" id="rad-status" aria-live="polite" style="margin-left: auto;">
+        <span class="status-dot"></span> Pulm API
+      </div>
+      <div class="status-pill status-ready" id="card-status" aria-live="polite">
+        <span class="status-dot"></span> Card API
+      </div>
     </div>
 
+    <main class="page-stack">
 
+      <!-- HOME PAGE -->
+      <section class="page is-active" id="home-page" data-page="home">
+        <div style="text-align: center; margin-bottom: 48px;">
+          <h1 style="font-size: 36px; color: var(--text-900); margin-bottom: 12px;">Select Clinical Specialty</h1>
+          <p style="color: var(--color-primary); font-size: 16px;">Choose a medical specialty to initialize the corresponding AI inference model and begin diagnosis.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 800px; margin: 0 auto;">
+          <div class="glass-card specialty-card" data-select-module="radiology" style="cursor: pointer; text-align: center; padding: 48px 24px; transition: all 0.2s;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path><path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path><path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path></svg>
+            </div>
+            <h2 style="font-size: 24px; margin-bottom: 8px;">Pulmonology</h2>
+            <p style="font-size: 14px; color: var(--color-primary);">Chest X-Ray / Pneumonia</p>
+          </div>
+          <div class="glass-card specialty-card" data-select-module="cardiology" style="cursor: pointer; text-align: center; padding: 48px 24px; transition: all 0.2s;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(124,92,191,0.1); color: var(--color-cardio); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+            </div>
+            <h2 style="font-size: 24px; margin-bottom: 8px;">Cardiology</h2>
+            <p style="font-size: 14px; color: var(--color-primary);">Cardiogram / Heart Disease</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- INPUT PAGE -->
+      <section class="page" id="input-page" data-page="input">
+        
+        <!-- RADIOLOGY INPUT -->
+        <div id="radiology-input" class="upload-layout">
+          <!-- Left Column -->
+          <div class="upload-col">
+            <label class="upload-dropzone" for="xray-upload" id="dropzone">
+              <input id="xray-upload" class="visually-hidden" type="file" accept=".png,.jpg,.jpeg,.dcm" />
+              <div class="upload-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              </div>
+              <div class="upload-title">Drop your scan here</div>
+              <div class="upload-subtitle">PNG, JPG, DICOM - max 20MB</div>
+              <div class="upload-link">Drag to preview instantly or click to replace later</div>
+            </label>
+            
+            <div class="status-cards">
+              <div class="status-card empty" id="status-card-1">
+                No image selected yet
+              </div>
+              <div class="status-card info" id="status-card-2">
+                <div class="status-header">
+                  <span>Image preprocessing</span>
+                  <span style="color:var(--text-300);">Waiting for upload</span>
+                </div>
+                <div class="status-sub">Formats are validated before analysis begins.</div>
+              </div>
+            </div>
+          </div>
 
-    <script src="./script.js"></script>
+          <!-- Right Column -->
+          <div class="patient-panel" id="rad-form">
+            <div class="field-group">
+              <label class="field-label">SYMPTOMS</label>
+              <div class="chip-container" id="symptom-chips">
+                <button type="button" class="chip" data-val="Fever">Fever</button>
+                <button type="button" class="chip" data-val="Cough">Cough</button>
+                <button type="button" class="chip" data-val="Shortness of Breath">Shortness of Breath</button>
+                <button type="button" class="chip" data-val="Chest Pain">Chest Pain</button>
+              </div>
+              <input type="hidden" id="rad-symptoms" value="" />
+            </div>
 
-  </body>
+            <div class="grid-2">
+              <div class="field-group">
+                <label class="field-label">SPO2 READING (%)</label>
+                <input class="input-field" type="number" id="rad-spo2" min="40" max="100" value="98" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">URGENCY</label>
+                <div class="segmented-control">
+                  <button class="segment is-selected" type="button" data-val="Routine">Routine</button>
+                  <button class="segment" type="button" data-val="Urgent">Urgent</button>
+                </div>
+              </div>
+            </div>
+            <div class="hint-text">Contextual vital updates automatically.</div>
 
+            <div class="field-group">
+              <label class="field-label">PAST MEDICAL HISTORY</label>
+              <textarea class="input-field textarea-field" id="rad-history" placeholder="COPD, diabetes, prior admission for lower respiratory infection..."></textarea>
+            </div>
+
+            <button class="btn-primary" type="button" id="analyze-rad-btn">Analyze Scan & View Results</button>
+          </div>
+        </div>
+
+        <!-- CARDIOLOGY INPUT -->
+        <div id="cardiology-input" class="cardio-layout hidden">
+          <section class="glass-card cardio-form-col">
+            <div class="section-title">Cardiology Assessment</div>
+            <div class="grid-2 mt-4">
+              <div class="field-group"><label class="field-label">Age</label><input class="input-field" type="number" id="card-age" value="55" /></div>
+              <div class="field-group"><label class="field-label">Sex (1=M, 0=F)</label><input class="input-field" type="number" id="card-sex" value="1" /></div>
+              <div class="field-group"><label class="field-label">Chest Pain (0-3)</label><input class="input-field" type="number" id="card-cp" value="3" /></div>
+              <div class="field-group"><label class="field-label">Resting BP</label><input class="input-field" type="number" id="card-trestbps" value="145" /></div>
+              <div class="field-group"><label class="field-label">Cholesterol</label><input class="input-field" type="number" id="card-chol" value="233" /></div>
+              <div class="field-group"><label class="field-label">Fasting BS >120</label><input class="input-field" type="number" id="card-fbs" value="1" /></div>
+            </div>
+            <div class="grid-2 mt-4">
+              <button class="btn-secondary" type="button" id="fast-risk-btn">Fast Risk Score</button>
+              <button class="btn-cardio" type="button" id="full-analysis-btn">Full Analysis (LLM)</button>
+            </div>
+          </section>
+          
+          <section class="glass-card flex-between" style="justify-content: center; text-align: center; border: 1px dashed var(--border);">
+            <div>
+              <h3 style="color: var(--text-500);">Fill out the form and run analysis</h3>
+              <p>Results will be populated here.</p>
+            </div>
+          </section>
+        </div>
+
+      </section>
+
+      <!-- RESULTS PAGE -->
+      <section class="page" id="results-page" data-page="results">
+        
+        <!-- RADIOLOGY RESULTS -->
+        <div id="radiology-results" class="dashboard-layout hidden">
+          <section class="glass-card dashboard-col">
+            <div class="section-title">X-Ray Viewer</div>
+            <div class="viewer-actions flex-between mb-4">
+              <div class="segmented-control" style="width: 200px;">
+                <button class="segment is-selected" type="button" id="view-orig">Original</button>
+                <button class="segment" type="button" id="view-gradcam">Grad-CAM</button>
+              </div>
+            </div>
+            <div class="viewer-stage">
+              <img class="viewer-image" id="res-image" />
+              <div class="heatmap-layer hidden" id="res-heatmap-layer">
+                <img class="viewer-image" id="res-heatmap" />
+              </div>
+            </div>
+          </section>
+
+          <section class="glass-card dashboard-col">
+            <div class="section-title flex-between">
+              Model Assessment
+              <div class="risk-badge" id="rad-risk-badge">
+                <span id="rad-risk-label">Unknown Risk</span>
+              </div>
+            </div>
+            
+            <div class="gauge-card">
+              <svg class="gauge-svg" viewBox="0 0 160 160">
+                <circle class="gauge-track" cx="80" cy="80" r="58"></circle>
+                <circle class="gauge-fill" id="rad-gauge-fill" cx="80" cy="80" r="58"></circle>
+              </svg>
+              <div class="gauge-center">
+                <strong id="rad-gauge-value">--%</strong>
+                <span>Probability</span>
+              </div>
+            </div>
+            <p style="font-size: 14px; text-align: center; color: var(--text-500);" id="rad-model-summary"></p>
+          </section>
+
+          <section class="glass-card dashboard-col">
+            <div class="section-title">Clinical Guidance</div>
+            
+            <div id="rad-next-steps" class="snippet-accordion"></div>
+            <div id="rad-knowledge" class="snippet-accordion"></div>
+          </section>
+        </div>
+
+        <!-- CARDIOLOGY RESULTS -->
+        <div id="cardiology-results" class="cardio-layout hidden">
+           <section class="glass-card">
+              <div class="section-title flex-between">
+                Risk Assessment
+                <div class="risk-badge" id="card-risk-badge">
+                  <span id="card-risk-label">Unknown Risk</span>
+                </div>
+              </div>
+              <div class="gauge-card">
+                <svg class="gauge-svg" viewBox="0 0 160 160">
+                  <circle class="gauge-track" cx="80" cy="80" r="58"></circle>
+                  <circle class="gauge-fill" id="card-gauge-fill" cx="80" cy="80" r="58" style="stroke: var(--color-cardio);"></circle>
+                </svg>
+                <div class="gauge-center">
+                  <strong id="card-gauge-value">--%</strong>
+                  <span>CV Risk</span>
+                </div>
+              </div>
+              <div style="background: var(--color-bg); padding: 16px; border-radius: 8px; font-size: 14px; margin-top: 16px;">
+                <strong>Patient Profile:</strong>
+                <p id="card-profile" style="margin-top: 8px;"></p>
+              </div>
+           </section>
+           <section class="glass-card">
+              <div class="section-title">AI Explainability</div>
+              <h3 style="margin-bottom: 16px; color: var(--color-cardio);">Why this prediction?</h3>
+              <div id="shap-container" style="font-size: 14px;">Run full analysis...</div>
+              <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--color-cardio);">LLM Explanation</h3>
+              <div id="llm-output" style="font-size: 14px;">Run full analysis...</div>
+           </section>
+        </div>
+      </section>
+
+      <!-- HISTORY PAGE -->
+      <section class="page" id="history-page" data-page="history">
+        <section class="glass-card" style="min-height: 60vh;">
+          <div class="section-title">Session History</div>
+          <h2>Analyzed Cases</h2>
+          <table class="history-table mt-4">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Risk Level</th>
+                <th>Probability</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <!-- CHATBOT PAGE -->
+      <section class="page" id="chatbot-page" data-page="chatbot">
+        <section class="glass-card chat-layout">
+          <div class="section-title">Clinical Assistant</div>
+          <h2 id="chat-title">Pulmonology Knowledge Base Chat</h2>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-message bot" id="chat-welcome">Hello! I am your clinical assistant for Pulmonology guidelines. Ask me anything.</div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask about guidelines, treatments, or risk factors..." />
+            <button id="chat-send-btn" class="btn-primary" style="width: auto;" type="button">Send</button>
+          </div>
+        </section>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
 </html>
-
-

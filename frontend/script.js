@@ -1,714 +1,449 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const metaApi = document.querySelector('meta[name="api-base"]');
-  const API_BASE = window.NUVEXA_API_BASE || (metaApi && metaApi.content) || 'http://127.0.0.1:8000';
+  const RAD_API = 'http://127.0.0.1:8000';
+  const CARD_API = 'http://127.0.0.1:8001';
 
-  // === STATE ===
   const state = {
+    activeModule: 'radiology',
     file: null,
-    patient: {
-      age: '',
-      sex: 'Male',
-      symptoms: new Set(),
+    radParams: {
       spo2: '',
-      urgency: 'Routine',
-      history: ''
+      symptoms: new Set(),
+      urgency: 'Routine'
     },
-    isAnalyzing: false,
-    cases: loadCases(),
-    currentResult: null
+    cases: loadCases()
   };
 
-  // === ROUTING ===
-  const pages = document.querySelectorAll('.page');
+  // === ROUTING & MODULE SWITCHING ===
   const navLinks = document.querySelectorAll('.nav-link');
-  const routeButtons = document.querySelectorAll('[data-route]');
-  const menuToggle = document.querySelector('[data-menu-toggle]');
-  const mobileNav = document.querySelector('[data-mobile-nav]');
-
-  if (menuToggle && mobileNav) {
-    menuToggle.addEventListener('click', () => {
-      const isOpen = mobileNav.classList.toggle('is-open');
-      mobileNav.style.display = isOpen ? 'flex' : '';
-    });
-  }
+  const pages = document.querySelectorAll('.page');
+  const moduleTabs = document.querySelectorAll('.module-tab');
+  const appShell = document.querySelector('.app-shell');
+  // moduleBadge removed in index.html, so skip it
 
   function navigateTo(routeId) {
-    navLinks.forEach(link => {
-      link.classList.toggle('is-active', link.dataset.route === routeId);
-    });
-
-    pages.forEach(page => {
-      if (page.dataset.page === routeId) {
-        page.classList.add('is-active');
-        void page.offsetWidth;
-      } else {
-        page.classList.remove('is-active');
-      }
-    });
-
-    if (routeId === 'results') {
-      triggerGaugeAnimation();
-    }
-    if (routeId === 'history') {
-      renderHistory();
-    }
-    if (mobileNav && mobileNav.classList.contains('is-open')) {
-      mobileNav.classList.remove('is-open');
-      mobileNav.style.display = '';
-    }
-  }
-
-  routeButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigateTo(btn.dataset.route);
-    });
-  });
-
-  // === HEALTH CHECK ===
-  const statusPill = document.querySelector('.status-pill');
-  const statusDot = document.querySelector('.status-dot');
-  let statusText = statusPill.querySelector('.status-text');
-  if (!statusText) {
-    statusText = document.createElement('span');
-    statusText.className = 'status-text';
-    statusPill.innerHTML = '';
-    statusPill.appendChild(statusDot);
-    statusPill.appendChild(statusText);
-  }
-  async function checkHealth() {
-    try {
-      const res = await fetch(`${API_BASE}/health`);
-      if (!res.ok) throw new Error('offline');
-      statusText.textContent = 'API Ready';
-      statusPill.style.color = 'var(--success)';
-      statusDot.style.background = 'var(--success)';
-      statusDot.style.boxShadow = '0 0 8px var(--success)';
-    } catch {
-      statusText.textContent = 'API Offline';
-      statusPill.style.color = 'var(--danger)';
-      statusDot.style.background = 'var(--danger)';
-      statusDot.style.boxShadow = '0 0 8px var(--danger)';
-    }
-  }
-  checkHealth();
-  setInterval(checkHealth, 15000);
-
-  // === UPLOAD / DROPZONE ===
-  const dropzone = document.querySelector('[data-dropzone]');
-  const fileInput = document.querySelector('[data-file-input]');
-  const feedbackPanel = document.querySelector('.upload-feedback');
-  const previewEmpty = document.querySelector('[data-preview-empty]');
-  const previewImage = document.querySelector('[data-preview-image]');
-  const previewOverlay = document.querySelector('[data-preview-overlay]');
-  const fileNameDisplay = document.querySelector('[data-file-name]');
-  const fileSizeDisplay = document.querySelector('[data-file-size]');
-  const fileTypeDisplay = document.querySelector('[data-file-type]');
-  const progFill = document.querySelector('[data-progress-fill]');
-  const prepLabel = document.querySelector('[data-preprocess-label]');
-  const analyzeBtn = document.querySelector('[data-analyze]');
-  const analyzeCopy = document.querySelector('[data-analyze-copy]');
-  const uploadError = document.querySelector('[data-upload-error]');
-
-  function resetUploadError() {
-    uploadError.textContent = 'Formats are validated before analysis begins.';
-    uploadError.style.color = 'var(--text-300)';
-  }
-
-  function showUploadError(message) {
-    uploadError.textContent = message;
-    uploadError.style.color = 'var(--danger)';
-  }
-
-  function handleFile(file) {
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) {
-      showUploadError('File too large. Max size is 20MB.');
+    if (routeId !== 'home' && !state.activeModule) {
+      alert('Please select a clinical specialty first.');
       return;
     }
 
-    state.file = file;
-    resetUploadError();
+    navLinks.forEach(l => l.classList.toggle('is-active', l.dataset.route === routeId));
+    pages.forEach(p => {
+      if (p.dataset.page === routeId) {
+        p.classList.add('is-active');
+        if (routeId === 'results') animateGauges();
+      } else {
+        p.classList.remove('is-active');
+      }
+    });
 
-    dropzone.style.display = 'none';
-    feedbackPanel.classList.add('is-visible');
-    previewEmpty.classList.add('hidden');
-    previewOverlay.classList.remove('hidden');
-
-    const isDicom = file.name.toLowerCase().endsWith('.dcm');
-    if (isDicom) {
-      previewImage.classList.add('hidden');
-    } else {
-      const objUrl = URL.createObjectURL(file);
-      previewImage.src = objUrl;
-      previewImage.classList.remove('hidden');
+    // Show/hide module tabs
+    const tabsContainer = document.getElementById('module-tabs-container');
+    if (tabsContainer) {
+      tabsContainer.style.display = routeId === 'home' ? 'none' : 'flex';
     }
-
-    fileNameDisplay.textContent = file.name;
-    fileSizeDisplay.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-    fileTypeDisplay.textContent = isDicom ? 'DICOM' : file.type.includes('png') ? 'PNG' : 'JPG';
-
-    prepLabel.textContent = 'Analyzing headers...';
-    progFill.style.width = '30%';
-
-    setTimeout(() => {
-      prepLabel.textContent = 'Normalizing contrast...';
-      progFill.style.width = '70%';
-    }, 400);
-
-    setTimeout(() => {
-      prepLabel.textContent = 'Ready for inference';
-      progFill.style.width = '100%';
-      progFill.style.background = 'var(--success)';
-
-      analyzeBtn.removeAttribute('disabled');
-      analyzeCopy.textContent = 'Model ready to process image';
-    }, 800);
   }
 
-  fileInput.addEventListener('change', (e) => {
+  navLinks.forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.route));
+  });
+
+  function setModule(mod) {
+    state.activeModule = mod;
+    moduleTabs.forEach(t => t.classList.toggle('is-active', t.dataset.module === mod));
+    appShell.setAttribute('data-module', mod);
+
+    document.getElementById('radiology-input').classList.toggle('hidden', mod !== 'radiology');
+    document.getElementById('cardiology-input').classList.toggle('hidden', mod !== 'cardiology');
+    document.getElementById('radiology-results').classList.toggle('hidden', mod !== 'radiology');
+    document.getElementById('cardiology-results').classList.toggle('hidden', mod !== 'cardiology');
+    
+    // Update Chatbot titles
+    if (mod === 'radiology') {
+      document.getElementById('chat-title').textContent = 'Pulmonology Knowledge Base Chat';
+      document.getElementById('chat-welcome').textContent = 'Hello! I am your clinical assistant for Pulmonology guidelines. Ask me anything.';
+    } else {
+      document.getElementById('chat-title').textContent = 'Cardiology Knowledge Base Chat';
+      document.getElementById('chat-welcome').textContent = 'Hello! I am your clinical assistant for Cardiology guidelines. Ask me anything.';
+    }
+
+    if (document.getElementById('results-page').classList.contains('is-active')) {
+      animateGauges();
+    }
+  }
+
+  moduleTabs.forEach(tab => {
+    tab.addEventListener('click', () => setModule(tab.dataset.module));
+  });
+
+  // Home Page Specialty Selection
+  document.querySelectorAll('.specialty-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      const module = e.currentTarget.dataset.selectModule;
+      setModule(module);
+      navigateTo('input');
+    });
+  });
+
+  // === HEALTH CHECKS ===
+  async function checkHealth(url, elId) {
+    const el = document.getElementById(elId);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      el.className = 'status-pill status-ready';
+      el.innerHTML = `<span class="status-dot"></span> ${elId === 'rad-status' ? 'Rad' : 'Card'} API`;
+    } catch {
+      el.className = 'status-pill status-offline';
+      el.innerHTML = `<span class="status-dot"></span> ${elId === 'rad-status' ? 'Rad' : 'Card'} Offline`;
+    }
+  }
+  setInterval(() => {
+    checkHealth(`${RAD_API}/health`, 'rad-status');
+    checkHealth(`${CARD_API}/`, 'card-status');
+  }, 10000);
+  checkHealth(`${RAD_API}/health`, 'rad-status');
+  checkHealth(`${CARD_API}/`, 'card-status');
+
+  // === RADIOLOGY INPUT ===
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('xray-upload');
+  const previewImg = document.getElementById('preview-image');
+  
+  fileInput.addEventListener('change', e => {
     if (e.target.files.length) handleFile(e.target.files[0]);
   });
-
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
-    dropzone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); });
-  });
-
-  dropzone.addEventListener('dragover', () => dropzone.classList.add('is-dragover'));
-  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
-  dropzone.addEventListener('drop', (e) => {
+  
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('is-dragover'); });
+  dropzone.addEventListener('dragleave', e => { e.preventDefault(); dropzone.classList.remove('is-dragover'); });
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
     dropzone.classList.remove('is-dragover');
-    if (e.dataTransfer.files.length) {
-      handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(f) {
+    state.file = f;
+    const card1 = document.getElementById('status-card-1');
+    const card2 = document.getElementById('status-card-2');
+    
+    card1.classList.remove('empty');
+    card1.classList.add('info');
+    card1.innerHTML = `<div class="status-header"><span>Selected Image</span></div><div class="status-sub">${f.name}</div>`;
+    
+    card2.innerHTML = `<div class="status-header"><span>Ready for Analysis</span><span style="color:var(--color-success);">Ready</span></div><div class="status-sub">Formats validated.</div>`;
+    
+    const previewImg = document.getElementById('preview-image');
+    if (previewImg && !f.name.toLowerCase().endsWith('.dcm')) {
+      previewImg.src = URL.createObjectURL(f);
+      previewImg.classList.remove('hidden');
     }
-  });
+  }
 
-  // === FORM LOGIC ===
-  const ageInput = document.querySelector('[data-age]');
-  ageInput.addEventListener('input', e => state.patient.age = e.target.value);
-
-  const sexButtons = document.querySelectorAll('[data-sex]');
-  sexButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      sexButtons.forEach(b => b.classList.remove('is-selected'));
-      btn.classList.add('is-selected');
-      state.patient.sex = btn.dataset.sex;
-    });
-  });
-
-  const symptomButtons = document.querySelectorAll('[data-symptom]');
-  symptomButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sym = btn.dataset.symptom;
-      if (state.patient.symptoms.has(sym)) {
-        state.patient.symptoms.delete(sym);
-        btn.classList.remove('is-active');
-      } else {
-        state.patient.symptoms.add(sym);
-        btn.classList.add('is-active');
+  // Segmented control (urgency)
+  document.querySelectorAll('.segmented-control .segment').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const parent = e.target.closest('.segmented-control');
+      parent.querySelectorAll('.segment').forEach(s => s.classList.remove('is-selected'));
+      e.target.classList.add('is-selected');
+      if (parent.closest('#rad-form') || parent.closest('.grid-2')) {
+        state.radParams.urgency = e.target.dataset.val;
       }
     });
   });
 
-  const spo2Input = document.querySelector('[data-spo2]');
-  const spo2Indicator = document.querySelector('[data-spo2-indicator]');
-  const spo2Copy = document.querySelector('[data-spo2-copy]');
-
-  spo2Input.addEventListener('input', e => {
-    const val = parseInt(e.target.value, 10);
-    state.patient.spo2 = e.target.value;
-
-    spo2Indicator.className = 'spo2-indicator';
-    if (isNaN(val)) {
-      spo2Indicator.classList.add('status-neutral');
-      spo2Copy.textContent = 'Live triage color updates based on oxygen saturation.';
-      spo2Copy.style.color = 'var(--text-500)';
-    } else if (val >= 95) {
-      spo2Indicator.classList.add('status-good');
-      spo2Copy.textContent = 'Normal saturation level.';
-      spo2Copy.style.color = 'var(--success)';
-    } else if (val >= 90) {
-      spo2Indicator.classList.add('status-warn');
-      spo2Copy.textContent = 'Caution: Slight hypoxia detected.';
-      spo2Copy.style.color = 'var(--warning)';
-    } else {
-      spo2Indicator.classList.add('status-bad');
-      spo2Copy.textContent = 'Warning: Severe hypoxia trigger added to Red Flags.';
-      spo2Copy.style.color = 'var(--danger)';
-    }
-  });
-
-  const urgencyButtons = document.querySelectorAll('[data-urgency]');
-  const urgencyLabel = document.querySelector('[data-urgency-label]');
-  urgencyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      urgencyButtons.forEach(b => b.classList.remove('is-selected'));
-      btn.classList.add('is-selected');
-      state.patient.urgency = btn.dataset.urgency;
-      urgencyLabel.textContent = state.patient.urgency + ' Review';
-
-      if (state.patient.urgency === 'Urgent') {
-        urgencyLabel.style.background = 'var(--danger-bg)';
-        urgencyLabel.style.color = 'var(--danger)';
+  // Symptom chips logic
+  document.querySelectorAll('#symptom-chips .chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.target.classList.toggle('is-active');
+      const val = e.target.dataset.val;
+      if (e.target.classList.contains('is-active')) {
+        state.radParams.symptoms.add(val);
       } else {
-        urgencyLabel.style.background = 'rgba(8,131,149,0.08)';
-        urgencyLabel.style.color = 'var(--primary)';
+        state.radParams.symptoms.delete(val);
       }
+      document.getElementById('rad-symptoms').value = Array.from(state.radParams.symptoms).join(', ');
     });
   });
 
-  const historyInput = document.querySelector('[data-history]');
-  const historyCount = document.querySelector('[data-history-count]');
-  historyInput.addEventListener('input', e => {
-    state.patient.history = e.target.value;
-    historyCount.textContent = `${e.target.value.length} / 240`;
-  });
+  // Analyze Radiology
+  document.getElementById('analyze-rad-btn').addEventListener('click', async (e) => {
+    if (!state.file) return alert('Upload an image first.');
+    const btn = e.target;
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
 
-  // === ANALYZE BACKEND ===
-  analyzeBtn.addEventListener('click', async () => {
-    if (state.isAnalyzing || !state.file) return;
-    state.isAnalyzing = true;
-    resetUploadError();
-
-    analyzeBtn.classList.add('is-loading');
-    analyzeBtn.querySelector('span').textContent = 'Processing...';
-    const stages = ['Uploading image...', 'Running model...', 'Retrieving guidance...'];
-    let stageIndex = 0;
-    analyzeCopy.textContent = stages[stageIndex];
-    const stageTimer = setInterval(() => {
-      stageIndex = (stageIndex + 1) % stages.length;
-      analyzeCopy.textContent = stages[stageIndex];
-    }, 1200);
-
-    const formData = new FormData();
-    formData.append('image', state.file);
-    if (state.patient.age) formData.append('age', state.patient.age);
-    if (state.patient.sex) formData.append('sex', state.patient.sex);
-    if (state.patient.spo2) formData.append('spo2', state.patient.spo2);
-    if (state.patient.urgency) formData.append('urgency', state.patient.urgency);
-    if (state.patient.history) formData.append('history', state.patient.history);
-    if (state.patient.symptoms.size) {
-      formData.append('symptoms', JSON.stringify(Array.from(state.patient.symptoms)));
-    }
+    const fd = new FormData();
+    fd.append('image', state.file);
+    fd.append('spo2', document.getElementById('rad-spo2').value);
+    fd.append('symptoms', document.getElementById('rad-symptoms').value);
+    const historyEl = document.getElementById('rad-history');
+    if (historyEl) fd.append('history', historyEl.value);
+    fd.append('urgency', state.radParams.urgency);
 
     try {
-      const response = await fetch(`${API_BASE}/predict`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Backend request failed.');
-      }
-
-      analyzeCopy.textContent = 'Processing model response...';
-      const payload = await response.json();
-      const normalized = normalizeResponse(payload);
-
-      updateResults(normalized);
-      addHistoryItem(normalized);
-      saveCases();
-
-      clearInterval(stageTimer);
-      analyzeBtn.classList.remove('is-loading');
-      analyzeBtn.querySelector('span').textContent = 'Analyze Case';
-      analyzeCopy.textContent = 'Upload an image to continue';
-      state.isAnalyzing = false;
-
+      const res = await fetch(`${RAD_API}/predict`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('API Error');
+      const data = await res.json();
+      
+      renderRadResults(data);
+      addCaseToHistory({ id: data.id, module: 'Radiology', risk: data.risk, prob: data.probability });
       navigateTo('results');
     } catch (err) {
-      clearInterval(stageTimer);
-      state.isAnalyzing = false;
-      analyzeBtn.classList.remove('is-loading');
-      analyzeBtn.querySelector('span').textContent = 'Analyze Case';
-      analyzeCopy.textContent = 'Upload an image to continue';
-      showUploadError(err.message || 'Unable to reach the backend.');
+      alert('Error: ' + err.message);
+    } finally {
+      btn.textContent = 'Analyze Case';
+      btn.disabled = false;
     }
   });
 
-  function normalizeResponse(payload) {
-    const prob = pickNumber(
-      payload.probability ??
-      payload.pneumonia_probability ??
-      payload.prob_pneu ??
-      payload.score ??
-      payload.pred_prob,
-      0
-    );
-
-    let risk = (payload.risk || payload.risk_level || '').toString().toLowerCase();
-    if (!['low', 'moderate', 'high'].includes(risk)) {
-      risk = prob >= 0.7 ? 'high' : prob >= 0.4 ? 'moderate' : 'low';
+  function renderRadResults(data) {
+    document.getElementById('res-image').src = `data:image/png;base64,${data.image_base64}`;
+    if (data.gradcam_base64) {
+      document.getElementById('res-heatmap').src = `data:image/png;base64,${data.gradcam_base64}`;
     }
+    
+    document.getElementById('rad-risk-badge').className = `risk-badge ${data.risk}`;
+    document.getElementById('rad-risk-label').textContent = `${data.risk.toUpperCase()} RISK`;
+    document.getElementById('rad-gauge-value').textContent = `${Math.round(data.probability * 100)}%`;
+    document.getElementById('rad-gauge-fill').dataset.prob = data.probability;
+    document.getElementById('rad-model-summary').textContent = data.model_summary;
 
-    const gradcamUrl = resolveUrl(payload.gradcam_url || payload.gradcam_path) ||
-      toDataUrl(payload.gradcam_base64) ||
-      toDataUrl(payload.heatmap);
+    const stepsCont = document.getElementById('rad-next-steps');
+    stepsCont.innerHTML = data.next_steps.map((s, i) => `<div class="snippet-card"><div class="snippet-header"><span class="snippet-source">Step ${i+1}</span></div><div class="snippet-text">${s}</div></div>`).join('');
+    
+    const kbCont = document.getElementById('rad-knowledge');
+    kbCont.innerHTML = data.knowledge.map((k) => `<div class="snippet-card"><div class="snippet-header"><span class="snippet-source">${k.source}</span></div><div class="snippet-text">${k.snippet}</div></div>`).join('');
+  }
 
-    const imageUrl = resolveUrl(payload.original_url || payload.image_url) ||
-      toDataUrl(payload.image_base64);
+  // Tab switching for Radiology Guidance
+  document.querySelectorAll('#radiology-results .tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      document.querySelectorAll('#radiology-results .tab').forEach(t => t.classList.remove('is-active'));
+      e.target.classList.add('is-active');
+      const t = e.target.dataset.tab;
+      document.getElementById('rad-next-steps').classList.toggle('hidden', t !== 'next-steps');
+      document.getElementById('rad-knowledge').classList.toggle('hidden', t !== 'knowledge');
+    });
+  });
 
-    const knowledgeRaw = payload.knowledge || payload.rag_results || payload.retrieved || [];
-    const knowledge = Array.isArray(knowledgeRaw) ? knowledgeRaw.map((item, idx) => ({
-      id: item.id || idx,
-      source: item.source || item.doc || item.title || `Source ${idx + 1}`,
-      score: pickNumber(item.score ?? item.relevance ?? item.similarity, 0.5),
-      snippet: item.snippet || item.text || item.content || ''
-    })) : [];
+  // Heatmap viewer toggles
+  const viewOrigBtn = document.getElementById('view-orig');
+  const viewGradcamBtn = document.getElementById('view-gradcam');
+  const heatmapOpacityInput = document.getElementById('heatmap-opacity');
+  
+  if (viewOrigBtn && viewGradcamBtn) {
+    viewOrigBtn.addEventListener('click', (e) => {
+      e.target.classList.add('is-selected');
+      viewGradcamBtn.classList.remove('is-selected');
+      document.getElementById('res-heatmap-layer').classList.add('hidden');
+    });
+    viewGradcamBtn.addEventListener('click', (e) => {
+      e.target.classList.add('is-selected');
+      viewOrigBtn.classList.remove('is-selected');
+      document.getElementById('res-heatmap-layer').classList.remove('hidden');
+    });
+  }
+  
+  if (heatmapOpacityInput) {
+    heatmapOpacityInput.addEventListener('input', e => {
+      document.getElementById('res-heatmap-layer').style.opacity = e.target.value / 100;
+    });
+  }
 
-    const nextSteps = toArray(payload.next_steps || payload.steps || payload.recommendations);
-    const redFlags = toArray(payload.red_flags || payload.alerts);
 
+  // === CARDIOLOGY INPUT & RESULTS ===
+  function safeVal(id, defaultVal) {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return defaultVal;
+    const parsed = parseFloat(el.value);
+    return isNaN(parsed) ? defaultVal : parsed;
+  }
+
+  function getCardioPayload() {
     return {
-      id: payload.id || payload.case_id || payload.request_id || `CXR-${Date.now()}`,
-      createdAt: payload.created_at || new Date().toISOString(),
-      probability: prob,
-      risk,
-      modelSummary: payload.model_summary || payload.summary || 'Model inference completed.',
-      confidence: pickNumber(payload.confidence, prob),
-      imageUrl,
-      gradcamUrl,
-      knowledge,
-      nextSteps,
-      redFlags,
-      clinical: { ...state.patient }
+      age: safeVal('card-age', 55),
+      sex: safeVal('card-sex', 1),
+      cp: safeVal('card-cp', 3),
+      trestbps: safeVal('card-trestbps', 145),
+      chol: safeVal('card-chol', 233),
+      fbs: safeVal('card-fbs', 1),
+      restecg: safeVal('card-restecg', 0),
+      thalach: safeVal('card-thalach', 150),
+      exang: safeVal('card-exang', 0),
+      oldpeak: safeVal('card-oldpeak', 2.3),
+      slope: safeVal('card-slope', 0),
+      ca: safeVal('card-ca', 0),
+      thal: safeVal('card-thal', 1)
     };
   }
 
-  function resolveUrl(value) {
-    if (!value) return null;
-    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) return value;
-    return `${API_BASE}${value.startsWith('/') ? '' : '/'}${value}`;
-  }
+  document.getElementById('fast-risk-btn').addEventListener('click', async (e) => {
+    const btn = e.target; btn.textContent = '...';
+    try {
+      const res = await fetch(`${CARD_API}/predict`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getCardioPayload())
+      });
+      const data = await res.json();
+      renderCardioResults({ risk: data.risk_level, probability: data.probability, profile: "Run Full Analysis for profile." }, false);
+      addCaseToHistory({ id: `CARD-${Date.now()}`, module: 'Cardiology', risk: data.risk_level, prob: data.probability });
+      navigateTo('results');
+    } catch(err) { alert(err.message); }
+    finally { btn.textContent = 'Fast Risk Score'; }
+  });
 
-  function toDataUrl(value) {
-    if (!value) return null;
-    if (value.startsWith('data:')) return value;
-    return `data:image/png;base64,${value}`;
-  }
+  document.getElementById('full-analysis-btn').addEventListener('click', async (e) => {
+    const btn = e.target; btn.textContent = '...';
+    document.getElementById('llm-output').innerHTML = '<span class="animate-reveal">Generating analysis...</span>';
+    try {
+      const res = await fetch(`${CARD_API}/full-analysis`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getCardioPayload())
+      });
+      const data = await res.json();
+      
+      const payload = {
+        risk: data.risk.risk_level,
+        probability: data.risk.risk_probability,
+        profile: data.profile,
+        top_features: data.top_features,
+        xai_summary: data.xai_summary,
+        explanation: data.explanation
+      };
 
-  function pickNumber(value, fallback = 0) {
-    if (typeof value === 'number' && !Number.isNaN(value)) return value;
-    if (typeof value === 'string') {
-      const parsed = Number(value);
-      if (!Number.isNaN(parsed)) return parsed;
-    }
-    return fallback;
-  }
+      renderCardioResults(payload, true);
+      addCaseToHistory({ id: `CARD-${Date.now()}`, module: 'Cardiology', risk: payload.risk, prob: payload.probability });
+      navigateTo('results');
+    } catch(err) { alert(err.message); }
+    finally { btn.textContent = 'Full Analysis (LLM)'; }
+  });
 
-  function toArray(value) {
-    if (Array.isArray(value)) return value;
-    if (typeof value === 'string') return [value];
-    return [];
-  }
+  function renderCardioResults(data, full) {
+    document.getElementById('card-risk-badge').className = `risk-badge ${data.risk.toLowerCase().replace(' risk', '')}`;
+    document.getElementById('card-risk-label').textContent = data.risk.toUpperCase().includes('RISK') ? data.risk.toUpperCase() : `${data.risk.toUpperCase()} RISK`;
+    document.getElementById('card-gauge-value').textContent = `${Math.round(data.probability * 100)}%`;
+    document.getElementById('card-gauge-fill').dataset.prob = data.probability;
+    
+    document.getElementById('card-profile').textContent = data.profile;
 
-  function updateResults(result) {
-    state.currentResult = result;
-    // Clinical recap
-    const dl = document.querySelector('[data-recap-list]');
-    dl.innerHTML = `
-      <div class="recap-item"><dt>Age / Sex</dt><dd>${result.clinical.age || 'N/A'}, ${result.clinical.sex}</dd></div>
-      <div class="recap-item"><dt>SpO2</dt><dd>${result.clinical.spo2 ? result.clinical.spo2 + '%' : 'N/A'}</dd></div>
-      <div class="recap-item"><dt>Symptoms</dt><dd>${Array.from(result.clinical.symptoms).join(', ') || 'None reported'}</dd></div>
-      <div class="recap-item"><dt>History</dt><dd class="truncate" title="${result.clinical.history}">${result.clinical.history || 'None'}</dd></div>
-    `;
-
-    // Risk badge + gauge
-    const badge = document.querySelector('[data-risk-badge]');
-    const riskLabel = document.querySelector('[data-risk-label]');
-    const riskIcon = document.querySelector('[data-risk-icon]');
-    const gaugeValue = document.querySelector('[data-gauge-value]');
-    const gaugeFill = document.querySelector('[data-gauge-fill]');
-    const confidenceCopy = document.querySelector('[data-model-confidence]');
-
-    badge.className = `risk-badge risk-${result.risk}`;
-    riskLabel.textContent = `${capitalize(result.risk)} Risk`;
-    riskIcon.textContent = result.risk === 'low' ? '✓' : result.risk === 'high' ? '!' : 'i';
-
-    const probPercent = Math.round(result.probability * 100);
-    gaugeValue.textContent = `${probPercent}%`;
-    const offset = 364 - ((probPercent / 100) * 364);
-    gaugeFill.style.strokeDashoffset = offset;
-
-    if (result.risk === 'high') gaugeFill.style.stroke = 'var(--danger)';
-    else if (result.risk === 'low') gaugeFill.style.stroke = 'var(--success)';
-    else gaugeFill.style.stroke = 'var(--warning)';
-
-    confidenceCopy.textContent = `Model confidence: ${result.confidence.toFixed(2)}`;
-
-    // Viewer images
-    const viewerImg = document.querySelector('[data-viewer-base]');
-    const heatmapLayer = document.querySelector('[data-viewer-heatmap]');
-    const heatmapImg = document.querySelector('[data-viewer-heatmap-image]');
-    if (result.imageUrl) viewerImg.src = result.imageUrl;
-    else if (state.file) viewerImg.src = URL.createObjectURL(state.file);
-
-    const heatmapToggle = document.querySelector('[data-view-mode="heatmap"]');
-    const originalToggle = document.querySelector('[data-view-mode="original"]');
-    if (result.gradcamUrl) {
-      heatmapImg.src = result.gradcamUrl;
-      heatmapLayer.classList.remove('hidden');
-      heatmapToggle.classList.remove('is-disabled');
-    } else {
-      heatmapImg.removeAttribute('src');
-      heatmapLayer.classList.add('hidden');
-      heatmapToggle.classList.add('is-disabled');
-    }
-    originalToggle.classList.add('is-selected');
-    heatmapToggle.classList.remove('is-selected');
-
-    // Next steps
-    const stepsPanel = document.querySelector('[data-tab-panel="next-steps"]');
-    stepsPanel.innerHTML = '';
-    const steps = result.nextSteps.length ? result.nextSteps : [
-      'Correlate the radiographic pattern with symptoms, vitals, and oxygen saturation.',
-      'Review the heatmap for focal attention before deciding on escalation.',
-      'Consider antibiotics and follow-up imaging if clinically indicated.'
-    ];
-    steps.forEach((step, idx) => {
-      const card = document.createElement('div');
-      card.className = 'step-card glass glass-inset';
-      card.innerHTML = `<span>${idx + 1}</span><p>${step}</p>`;
-      stepsPanel.appendChild(card);
-    });
-
-    // Knowledge base
-    const knowledgePanel = document.querySelector('[data-tab-panel="knowledge-base"]');
-    knowledgePanel.innerHTML = '';
-    const knowledge = result.knowledge.length ? result.knowledge : [{
-      source: 'No knowledge retrieved',
-      score: 0.0,
-      snippet: 'No external clinical guidance returned for this case.'
-    }];
-    knowledge.forEach((item, idx) => {
-      const details = document.createElement('details');
-      details.className = 'knowledge-card glass glass-inset';
-      details.open = idx === 0;
-      details.innerHTML = `
-        <summary>
-          <div>
-            <strong>${item.source}</strong>
-            <span>Relevance ${(item.score * 100).toFixed(0)}</span>
+    const shapCont = document.getElementById('shap-container');
+    shapCont.innerHTML = '';
+    
+    if (full && data.top_features) {
+      data.top_features.forEach((f, i) => {
+        const isPos = f.impact > 0;
+        const width = Math.min(100, Math.abs(f.impact) * 100);
+        shapCont.innerHTML += `
+          <div class="shap-row animate-reveal delay-${i+1}">
+            <div class="shap-label" title="${f.feature}">${f.feature}</div>
+            <div class="shap-track">
+              <div class="shap-center-line"></div>
+              <div class="shap-fill ${isPos ? 'positive' : 'negative'}" style="width: ${width}%"></div>
+            </div>
+            <div class="shap-value" style="color: var(--${isPos ? 'color-danger' : 'color-success'})">${isPos ? '+' : ''}${f.impact.toFixed(2)}</div>
           </div>
-          <span class="score-bar"><i style="width: ${(item.score * 100).toFixed(0)}%"></i></span>
-        </summary>
-        <p>${item.snippet || 'No summary provided.'}</p>
-      `;
-      knowledgePanel.appendChild(details);
-    });
-
-    // Red flags
-    const redFlagsPanel = document.querySelector('[data-tab-panel="red-flags"]');
-    redFlagsPanel.innerHTML = '';
-    const flags = result.redFlags.length ? result.redFlags : [
-      'SpO2 < 90% on room air',
-      'Severe respiratory distress or altered sensorium',
-      'Rapid progression of symptoms',
-      'Hypotension or signs of sepsis'
-    ];
-    flags.forEach(flag => {
-      const row = document.createElement('label');
-      row.className = 'check-row';
-      row.innerHTML = `<input type="checkbox" /><span>${flag}</span>`;
-      redFlagsPanel.appendChild(row);
-    });
-
-    if (parseInt(result.clinical.spo2, 10) < 90) {
-      const redTab = document.querySelector('[data-tab="red-flags"]');
-      const redPanel = document.querySelector('[data-tab-panel="red-flags"]');
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('is-active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('is-active'));
-      redTab.classList.add('is-active');
-      redPanel.classList.add('is-active');
+        `;
+      });
+      document.getElementById('llm-output').innerHTML = `<p class="animate-reveal delay-3">${data.explanation}</p>`;
+    } else {
+      shapCont.innerHTML = '<p style="color:var(--text-500)">Run Full Analysis to see explainability.</p>';
+      document.getElementById('llm-output').textContent = 'Run Full Analysis to generate LLM explanation...';
     }
   }
 
-  function triggerGaugeAnimation() {
-    const fill = document.querySelector('[data-gauge-fill]');
-    if (!fill) return;
-    const storedOffset = fill.style.strokeDashoffset;
-    fill.style.transition = 'none';
-    fill.style.strokeDashoffset = '364';
 
+  // === SHARED UTILS ===
+  function animateGauges() {
     setTimeout(() => {
-      fill.style.transition = 'stroke-dashoffset 1.5s var(--ease-bounce), stroke 0.5s';
-      fill.style.strokeDashoffset = storedOffset;
+      ['rad-gauge-fill', 'card-gauge-fill'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el && el.dataset.prob) {
+          const prob = parseFloat(el.dataset.prob);
+          // circumference is 2 * pi * r = 2 * 3.14159 * 58 = ~364.4 (in CSS it is 440 but we set r=58 so 2*pi*58=364)
+          // Wait, the new CSS has stroke-dasharray 440. I will adjust offset based on 440.
+          const offset = 440 - (prob * 440);
+          el.style.strokeDashoffset = offset;
+          
+          if (prob >= 0.7) el.style.stroke = 'var(--color-danger)';
+          else if (prob >= 0.4) el.style.stroke = 'var(--color-warning)';
+          else el.style.stroke = 'var(--color-success)';
+        }
+      });
     }, 100);
   }
 
-  // === VIEWER TOGGLE ===
-  const viewModes = document.querySelectorAll('[data-view-mode]');
-  const heatmapLayer = document.querySelector('[data-viewer-heatmap]');
-  const viewerFrame = document.querySelector('[data-viewer-frame]');
-  const zoomInBtn = document.querySelector('[data-zoom-in]');
-  const zoomOutBtn = document.querySelector('[data-zoom-out]');
-  let zoomLevel = 1;
-
-  // === GUIDANCE TABS ===
-  const tabs = document.querySelectorAll('.tab');
-  const panels = document.querySelectorAll('.tab-panel');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('is-active'));
-      panels.forEach(p => p.classList.remove('is-active'));
-      tab.classList.add('is-active');
-      const panel = document.querySelector(`[data-tab-panel="${tab.dataset.tab}"]`);
-      if (panel) panel.classList.add('is-active');
-    });
-  });
-
-  function applyZoom() {
-    if (!viewerFrame) return;
-    viewerFrame.style.transform = `scale(${zoomLevel})`;
-  }
-
-  if (zoomInBtn && zoomOutBtn) {
-    zoomInBtn.addEventListener('click', () => {
-      zoomLevel = Math.min(2.5, Number((zoomLevel + 0.1).toFixed(2)));
-      applyZoom();
-    });
-    zoomOutBtn.addEventListener('click', () => {
-      zoomLevel = Math.max(1, Number((zoomLevel - 0.1).toFixed(2)));
-      applyZoom();
-    });
-  }
-
-  viewModes.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.classList.contains('is-disabled')) return;
-      viewModes.forEach(b => b.classList.remove('is-selected'));
-      btn.classList.add('is-selected');
-      if (btn.dataset.viewMode === 'heatmap') {
-        heatmapLayer.classList.remove('hidden');
-      } else {
-        heatmapLayer.classList.add('hidden');
-      }
-    });
-  });
-
-  const opacityRange = document.querySelector('[data-opacity]');
-  const opacityCopy = document.querySelector('[data-opacity-copy]');
-  opacityRange.addEventListener('input', e => {
-    const val = e.target.value;
-    opacityCopy.textContent = `${val}%`;
-    heatmapLayer.style.opacity = (val / 100).toFixed(2);
-  });
-
-  const downloadOriginalBtn = document.querySelector('[data-download-original]');
-  const downloadOverlayBtn = document.querySelector('[data-download-overlay]');
-  const downloadReportBtn = document.querySelector('[data-download-report]');
-
-  function downloadImage(url, filename) {
-    if (!url) return;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-  }
-
-  downloadOriginalBtn.addEventListener('click', () => {
-    const url = state.currentResult?.imageUrl;
-    if (url) downloadImage(url, 'xray.png');
-  });
-
-  downloadOverlayBtn.addEventListener('click', () => {
-    const url = state.currentResult?.gradcamUrl;
-    if (url) downloadImage(url, 'gradcam.png');
-  });
-
-  downloadReportBtn.addEventListener('click', () => {
-    window.print();
-  });
-
-  // === HISTORY ===
-  const historyBody = document.querySelector('[data-history-body]');
-  const emptyState = document.querySelector('[data-empty-state]');
-  const historyWrap = document.querySelector('[data-history-wrap]');
-  const historySearch = document.querySelector('[data-history-search]');
-  const filterButtons = document.querySelectorAll('[data-filter]');
-
-  function addHistoryItem(result) {
-    state.cases.unshift(result);
-  }
-
-  function renderHistory() {
-    const query = historySearch.value.trim().toLowerCase();
-    const activeFilter = document.querySelector('.filter-chip.is-active')?.dataset.filter || 'All';
-
-    const filtered = state.cases.filter(item => {
-      const matchesQuery = !query || item.id.toLowerCase().includes(query) || item.risk.toLowerCase().includes(query);
-      const matchesFilter = activeFilter === 'All' || item.risk.toLowerCase() === activeFilter.toLowerCase();
-      return matchesQuery && matchesFilter;
-    });
-
-    historyBody.innerHTML = '';
-    if (!filtered.length) {
-      historyWrap.classList.add('hidden');
-      emptyState.classList.remove('hidden');
-      return;
-    }
-
-    historyWrap.classList.remove('hidden');
-    emptyState.classList.add('hidden');
-
-    filtered.forEach(item => {
-      const tr = document.createElement('tr');
-      const now = new Date(item.createdAt);
-      const riskBadgeHtml = getRiskBadgeHtml(item.risk);
-      const prob = Math.round(item.probability * 100);
-      tr.innerHTML = `
-        <td>
-          <div style="font-weight: 500">${now.toLocaleDateString()}</div>
-          <div style="font-size: 11px; color: var(--text-500)">${now.toLocaleTimeString([], {timeStyle: 'short'})}</div>
-        </td>
-        <td>${item.id}</td>
-        <td>${riskBadgeHtml}</td>
-        <td>${prob}%</td>
-        <td>
-           <button class="cta-secondary compact" style="padding: 6px 12px; font-size: 11px;" type="button" data-route="results">View</button>
-        </td>
-      `;
-      tr.querySelector('[data-route="results"]').addEventListener('click', () => {
-        updateResults(item);
-        navigateTo('results');
-      });
-      historyBody.appendChild(tr);
-    });
-  }
-
-  historySearch.addEventListener('input', renderHistory);
-  filterButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterButtons.forEach(b => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-      renderHistory();
-    });
-  });
-
-  function getRiskBadgeHtml(risk) {
-    if (risk === 'low') return `<div class="risk-badge risk-low"><span class="risk-icon">✓</span><span>Low</span></div>`;
-    if (risk === 'moderate') return `<div class="risk-badge risk-moderate"><span class="risk-icon">i</span><span>Moderate</span></div>`;
-    return `<div class="risk-badge risk-high" style="animation:none; box-shadow:none;"><span class="risk-icon">!</span><span>High</span></div>`;
-  }
-
-  function saveCases() {
-    sessionStorage.setItem('nuvexaCases', JSON.stringify(state.cases));
+  function addCaseToHistory(item) {
+    state.cases.unshift(item);
+    sessionStorage.setItem('nuvexav2', JSON.stringify(state.cases));
+    renderHistory();
   }
 
   function loadCases() {
-    try {
-      const raw = sessionStorage.getItem('nuvexaCases');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+    try { return JSON.parse(sessionStorage.getItem('nuvexav2')) || []; }
+    catch { return []; }
+  }
+
+  function renderHistory() {
+    const tbody = document.getElementById('history-body');
+    if (state.cases.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-500); padding: 48px;">No cases analyzed yet in this session.</td></tr>';
+      return;
     }
+    
+    tbody.innerHTML = state.cases.map(c => `
+      <tr>
+        <td style="font-family: 'JetBrains Mono', monospace;">${c.id}</td>
+        <td><span class="brand-badge" style="background: var(--color-${c.module === 'Radiology' ? 'primary' : 'cardio'})">${c.module}</span></td>
+        <td><div class="risk-badge ${c.risk.toLowerCase()}"><span>${c.risk.toUpperCase()}</span></div></td>
+        <td style="font-family: 'JetBrains Mono', monospace;">${Math.round(c.prob * 100)}%</td>
+      </tr>
+    `).join('');
   }
 
-  function capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
+  // === CHATBOT LOGIC ===
+  const chatInput = document.getElementById('chat-input');
+  const chatSendBtn = document.getElementById('chat-send-btn');
+  const chatMessages = document.getElementById('chat-messages');
+
+  async function sendChatMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-message user';
+    userMsg.textContent = text;
+    chatMessages.appendChild(userMsg);
+    chatInput.value = '';
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const botMsg = document.createElement('div');
+    botMsg.className = 'chat-message bot';
+    botMsg.innerHTML = '<span class="animate-reveal">Thinking...</span>';
+    chatMessages.appendChild(botMsg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const apiBase = state.activeModule === 'radiology' ? RAD_API : CARD_API;
+    try {
+      const res = await fetch(`${apiBase}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: text })
+      });
+      if (!res.ok) throw new Error('Failed to get response');
+      const data = await res.json();
+      botMsg.textContent = data.answer;
+    } catch (err) {
+      botMsg.textContent = 'Error connecting to the chatbot service. Is the backend running?';
+      botMsg.style.color = 'var(--color-danger)';
+    }
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  // Initialize history state
+  chatSendBtn.addEventListener('click', sendChatMessage);
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatMessage();
+  });
+
+  // Init
   renderHistory();
 });
